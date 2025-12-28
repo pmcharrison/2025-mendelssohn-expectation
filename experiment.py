@@ -5,6 +5,7 @@ In this experiment participants mark and describe interesting moments in a piece
 
 from pathlib import Path
 import json
+import random
 
 import psynet.experiment
 from mutagen.mp3 import MP3
@@ -28,13 +29,13 @@ def get_timeline():
     return Timeline(
         questionnaire(),
         InfoPage("Welcome! You will listen to audio and mark interesting moments.", time_estimate=5),
-        # CodeBlock(lambda participant: participant.var.set("event", [1])),
-        StaticTrialMaker(
+        CustomTrialMaker(
             id_="audio_timed_button_trial",
             trial_class=AudioTimedButtonTrial,
             nodes=get_nodes,  # not get_nodes()!
             expected_trials_per_participant=TRIALS_PER_PARTICIPANT,
             max_trials_per_participant=TRIALS_PER_PARTICIPANT,
+            max_trials_per_block=1,  # We treat each piece as a block
         ),
         InfoPage("Thank you for participating!", time_estimate=5)
     )
@@ -123,20 +124,50 @@ def questionnaire():
         time_estimate=60,
     )
 
+pieces = [
+    "Op. 19, No. 5",
+    "Op. 30, No. 1",
+    "Op. 30, No. 4",
+    "Op. 53, No. 3",
+    "Op. 62, No. 6",
+    "Op. 67, No. 4",
+    "Op. 67, No. 6",
+    "Op. 85, No. 2",
+    "Op. 102, No. 1",
+    "Op. 102, No. 2",
+]
+assert len(pieces) == 10
+
 
 def get_nodes():
-    return [
-        StaticNode(
-            definition={
-                "stimulus_name": path.stem,
-                "duration_seconds": MP3(str(path)).info.length
-            },
-            assets={
-                "stimulus_audio": asset(path, cache=False),  # reuse the uploaded file between deployments
-            },
-        )
-        for path in Path(STIMULUS_DIR).glob(STIMULUS_PATTERN)
-    ]
+    nodes = []
+
+    for piece in pieces:
+        for condition in ["1", "2a", "2b", "2c", "2d"]:
+            stimulus = f"{piece} condition {condition}"
+            path = Path(STIMULUS_DIR) / f"{stimulus}.mp3"
+            nodes.append(
+                StaticNode(
+                    definition={
+                        "piece": piece,
+                        "condition": condition,
+                        "stimulus": stimulus,
+                        "duration_seconds": MP3(str(path)).info.length
+                    },
+                    block="piece",
+                    assets={
+                        "audio": asset(path, cache=False),  # reuse the uploaded file between deployments
+                    },
+                )
+            )
+    return nodes
+
+
+class CustomTrialMaker(StaticTrialMaker):
+    def choose_block_order(self, experiment, participant, blocks):
+        shuffled_blocks = list(blocks)
+        random.shuffle(shuffled_blocks)
+        return shuffled_blocks
 
 
 class AudioTimedButtonTrial(StaticTrial):
@@ -147,7 +178,7 @@ class AudioTimedButtonTrial(StaticTrial):
         return ModularPage(
             "event_times",
             prompt=AudioPrompt(
-                audio=self.assets["stimulus_audio"],
+                audio=self.assets["audio"],
                 text="Listen to the music and press the button when you hear a surprising event.",
                 controls=False
             ),
