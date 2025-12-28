@@ -12,7 +12,7 @@ from mutagen.mp3 import MP3
 from psynet.asset import asset  # noqa
 from psynet.timeline import ProgressDisplay, ProgressStage, Timeline, join, PageMaker
 from psynet.page import InfoPage
-from psynet.modular_page import ModularPage, AudioPrompt, TextControl
+from psynet.modular_page import ModularPage, AudioPrompt, SurveyJSControl, TextControl
 from psynet.trial.static import StaticNode, StaticTrial, StaticTrialMaker
 from markupsafe import Markup
 
@@ -26,6 +26,7 @@ TRIALS_PER_PARTICIPANT = 2
 
 def get_timeline():
     return Timeline(
+        questionnaire(),
         InfoPage("Welcome! You will listen to audio and mark interesting moments.", time_estimate=5),
         # CodeBlock(lambda participant: participant.var.set("event", [1])),
         StaticTrialMaker(
@@ -36,6 +37,90 @@ def get_timeline():
             max_trials_per_participant=TRIALS_PER_PARTICIPANT,
         ),
         InfoPage("Thank you for participating!", time_estimate=5)
+    )
+
+def questionnaire():
+    return ModularPage(
+        "questionnaire",
+        prompt="Please answer the following questions about your musical experience and listening habits.",
+        control=SurveyJSControl(
+            design={
+                "pages": [
+                    {
+                        "name": "musical_experience",
+                        "elements": [
+                            {
+                                "type": "radiogroup",
+                                "name": "played_instrument",
+                                "title": "Have you ever played a musical instrument?",
+                                "isRequired": True,
+                                "choices": [
+                                    {"value": "yes", "text": "Yes"},
+                                    {"value": "no", "text": "No"}
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "name": "instrument_duration_page",
+                        "elements": [
+                            {
+                                "type": "radiogroup",
+                                "name": "instrument_duration",
+                                "title": "For how long did you play?",
+                                "isRequired": True,
+                                "visibleIf": "{played_instrument} = 'yes'",
+                                "choices": [
+                                    {"value": "<1", "text": "<1 year"},
+                                    {"value": "1-3", "text": "1-3 years"},
+                                    {"value": "4-7", "text": "4-7 years"},
+                                    {"value": "8-12", "text": "8-12 years"},
+                                    {"value": ">12", "text": ">12 years"}
+                                ],
+                            },
+                                                        {
+                                "type": "radiogroup",
+                                "name": "still_play",
+                                "title": "Do you still play?",
+                                "isRequired": True,
+                                "visibleIf": "{played_instrument} = 'yes'",
+                                "choices": [
+                                    {"value": "yes", "text": "Yes"},
+                                    {"value": "no", "text": "No"}
+                                ]
+                            },
+                        ]
+                    },
+                    {
+                        "name": "listening_habits",
+                        "title": "Listening Habits",
+                        "elements": [
+                            {
+                                "type": "radiogroup",
+                                "name": "listen_frequency",
+                                "title": "How regularly do you actively listen to music?",
+                                "isRequired": True,
+                                "choices": [
+                                    {"value": "never", "text": "Never"},
+                                    {"value": "<1", "text": "<1 hour per day"},
+                                    {"value": "1-2", "text": "1-2 hours per day"},
+                                    {"value": "3-5", "text": "3-5 hours per day"},
+                                    {"value": ">5", "text": ">5 hours per day"}
+                                ]
+                            },
+                            {
+                                "type": "text",
+                                "name": "predominant_genre",
+                                "title": "Which genre do you predominantly listen to?",
+                                "isRequired": True,
+                                "visibleIf": "{listen_frequency} != 'never'"
+                            }
+                        ]
+                    }
+                ]
+            },
+        ),
+        time_estimate=60,
     )
 
 
@@ -84,11 +169,7 @@ class AudioTimedButtonTrial(StaticTrial):
 
     @property
     def key_map(self):
-        result = {}
-        for key, choice in zip(self.keys, self.choices):
-            result[key] = choice
-            result[key.lower()] = choice
-        return result
+        return {key.lower(): choice for key, choice in zip(self.keys, self.choices)}
 
     @property
     def keyboard_javascript(self):
@@ -96,7 +177,7 @@ class AudioTimedButtonTrial(StaticTrial):
             f"const keyMap = {json.dumps(self.key_map)};",
             """
             document.addEventListener("keydown", function(event) {
-                const buttonId = keyMap[event.key];
+                const buttonId = keyMap[event.key.toLowerCase()];
                 if (buttonId) {
                     const button = document.getElementById(buttonId);
                     if (!button) {
