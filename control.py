@@ -4,11 +4,12 @@ from datetime import datetime
 
 
 class TimedPushButtonControl(BaseTimedPushButtonControl):
-    def __init__(self, choices, button_highlight_duration=0.75):
+    def __init__(self, choices, button_highlight_duration=0.75, bot_response=None):
         super().__init__(
             choices=choices,
             arrange_vertically=False,
-            button_highlight_duration=button_highlight_duration
+            button_highlight_duration=button_highlight_duration,
+            bot_response=bot_response,
         )
 
     def format_answer(self, raw_answer, **kwargs):

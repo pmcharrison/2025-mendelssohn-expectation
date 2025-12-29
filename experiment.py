@@ -3,128 +3,32 @@ In this experiment participants mark and describe interesting moments in a piece
 """
 # pylint: disable=missing-class-docstring,missing-function-docstring
 
+from collections import Counter
 from pathlib import Path
 import json
 import random
+from typing import List
 
+from sqlalchemy import func
+
+from psynet.bot import Bot
 import psynet.experiment
 from mutagen.mp3 import MP3
 
 from psynet.asset import asset  # noqa
-from psynet.timeline import ProgressDisplay, ProgressStage, Timeline, join, PageMaker
+from psynet.timeline import ProgressDisplay, ProgressStage, Timeline
 from psynet.page import InfoPage
-from psynet.modular_page import ModularPage, AudioPrompt, SurveyJSControl, TextControl
+from psynet.modular_page import ModularPage, AudioPrompt
 from psynet.trial.static import StaticNode, StaticTrial, StaticTrialMaker
-from markupsafe import Markup
 
 from .control import TimedPushButtonControl
+from .questionnaire import questionnaire
 
 
 STIMULUS_DIR = "data/stimuli"
 STIMULUS_PATTERN = "*.mp3"
-TRIALS_PER_PARTICIPANT = 2
 
-
-def get_timeline():
-    return Timeline(
-        questionnaire(),
-        InfoPage("Welcome! You will listen to audio and mark interesting moments.", time_estimate=5),
-        CustomTrialMaker(
-            id_="audio_timed_button_trial",
-            trial_class=AudioTimedButtonTrial,
-            nodes=get_nodes,  # not get_nodes()!
-            expected_trials_per_participant=TRIALS_PER_PARTICIPANT,
-            max_trials_per_participant=TRIALS_PER_PARTICIPANT,
-            max_trials_per_block=1,  # We treat each piece as a block
-        ),
-        InfoPage("Thank you for participating!", time_estimate=5)
-    )
-
-def questionnaire():
-    return ModularPage(
-        "questionnaire",
-        prompt="Please answer the following questions about your musical experience and listening habits.",
-        control=SurveyJSControl(
-            design={
-                "pages": [
-                    {
-                        "name": "musical_experience",
-                        "elements": [
-                            {
-                                "type": "radiogroup",
-                                "name": "played_instrument",
-                                "title": "Have you ever played a musical instrument?",
-                                "isRequired": True,
-                                "choices": [
-                                    {"value": "yes", "text": "Yes"},
-                                    {"value": "no", "text": "No"}
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        "name": "instrument_duration_page",
-                        "elements": [
-                            {
-                                "type": "radiogroup",
-                                "name": "instrument_duration",
-                                "title": "For how long did you play?",
-                                "isRequired": True,
-                                "visibleIf": "{played_instrument} = 'yes'",
-                                "choices": [
-                                    {"value": "<1", "text": "<1 year"},
-                                    {"value": "1-3", "text": "1-3 years"},
-                                    {"value": "4-7", "text": "4-7 years"},
-                                    {"value": "8-12", "text": "8-12 years"},
-                                    {"value": ">12", "text": ">12 years"}
-                                ],
-                            },
-                                                        {
-                                "type": "radiogroup",
-                                "name": "still_play",
-                                "title": "Do you still play?",
-                                "isRequired": True,
-                                "visibleIf": "{played_instrument} = 'yes'",
-                                "choices": [
-                                    {"value": "yes", "text": "Yes"},
-                                    {"value": "no", "text": "No"}
-                                ]
-                            },
-                        ]
-                    },
-                    {
-                        "name": "listening_habits",
-                        "title": "Listening Habits",
-                        "elements": [
-                            {
-                                "type": "radiogroup",
-                                "name": "listen_frequency",
-                                "title": "How regularly do you actively listen to music?",
-                                "isRequired": True,
-                                "choices": [
-                                    {"value": "never", "text": "Never"},
-                                    {"value": "<1", "text": "<1 hour per day"},
-                                    {"value": "1-2", "text": "1-2 hours per day"},
-                                    {"value": "3-5", "text": "3-5 hours per day"},
-                                    {"value": ">5", "text": ">5 hours per day"}
-                                ]
-                            },
-                            {
-                                "type": "text",
-                                "name": "predominant_genre",
-                                "title": "Which genre do you predominantly listen to?",
-                                "isRequired": True,
-                                "visibleIf": "{listen_frequency} != 'never'"
-                            }
-                        ]
-                    }
-                ]
-            },
-        ),
-        time_estimate=60,
-    )
-
-pieces = [
+PIECES = [
     "Op. 19, No. 5",
     "Op. 30, No. 1",
     "Op. 30, No. 4",
@@ -136,14 +40,37 @@ pieces = [
     "Op. 102, No. 1",
     "Op. 102, No. 2",
 ]
-assert len(pieces) == 10
+assert len(PIECES) == 10
+
+CONDITIONS = ["1", "2a", "2b", "2c", "2d"]
+assert len(CONDITIONS) == 5
+
+TRIALS_PER_PARTICIPANT = len(PIECES)
+
+
+
+def get_timeline():
+    return Timeline(
+        questionnaire(),
+        InfoPage("Welcome! You will listen to audio and mark interesting moments.", time_estimate=5),
+        CustomTrialMaker(
+            id_="main",
+            trial_class=AudioTimedButtonTrial,
+            nodes=get_nodes,  # not get_nodes()!
+            expected_trials_per_participant=TRIALS_PER_PARTICIPANT,
+            max_trials_per_participant=TRIALS_PER_PARTICIPANT,
+            max_trials_per_block=1,  # We treat each piece as a block
+            balance_across_nodes=True,  # PsyNet will make sure each piece/condition combination gets a similar number of trials
+        ),
+        InfoPage("Thank you for participating!", time_estimate=5)
+    )
 
 
 def get_nodes():
     nodes = []
 
-    for piece in pieces:
-        for condition in ["1", "2a", "2b", "2c", "2d"]:
+    for piece in PIECES:
+        for condition in CONDITIONS:
             stimulus = f"{piece} condition {condition}"
             path = Path(STIMULUS_DIR) / f"{stimulus}.mp3"
             nodes.append(
@@ -154,7 +81,7 @@ def get_nodes():
                         "stimulus": stimulus,
                         "duration_seconds": MP3(str(path)).info.length
                     },
-                    block="piece",
+                    block=piece,
                     assets={
                         "audio": asset(path, cache=False),  # reuse the uploaded file between deployments
                     },
@@ -184,13 +111,26 @@ class AudioTimedButtonTrial(StaticTrial):
             ),
             control=TimedPushButtonControl(
                 choices=self.choices,
-                button_highlight_duration=0.75
+                button_highlight_duration=0.75,
+                bot_response=self.generate_random_response,
             ),
             progress_display=ProgressDisplay(
                 stages=[ProgressStage([0.0, self.definition["duration_seconds"]])],
             ),
             scripts=[*self.keyboard_javascript],
         )
+
+    def generate_random_response(self):
+        n_events = random.randint(1, 3)
+        times = sorted(random.uniform(0, self.definition["duration_seconds"]) for _ in range(n_events))
+        choices = [random.choice(self.choices) for _ in range(n_events)]
+        return [
+            {
+                "choice": choice,
+                "time": time
+            }
+            for choice, time in zip(choices, times)
+        ]
 
     def show_feedback(self, experiment, participant):
         return InfoPage(f"Your response: {participant.answer}")
@@ -214,7 +154,7 @@ class AudioTimedButtonTrial(StaticTrial):
                     if (!button) {
                         throw new Error("Button '" + buttonId + "' not found");
                     }
-                    button.click();
+                     button.click();
                 }
             });
             """
@@ -223,3 +163,82 @@ class AudioTimedButtonTrial(StaticTrial):
 
 class Experiment(psynet.experiment.Experiment):
     timeline = get_timeline()
+
+    # There are 5 conditions, and each bot only sees one condition per stimulus,
+    # so we need 5 bots to see all the conditions for all stimuli.
+    test_n_bots = 5
+
+    def test_check_bots(self, bots: List[Bot]):
+        super().test_check_bots(bots)
+
+        assert len(bots) == self.test_n_bots
+
+        trials_by_bot = [
+            AudioTimedButtonTrial.query
+            .filter_by(
+                trial_maker_id="main",
+                participant_id=bot.id,
+            )
+            .order_by(AudioTimedButtonTrial.id)
+            .all()
+            for bot in bots
+        ]
+
+        # Check individual bots
+        for trials in trials_by_bot:
+            # Check that each bot saw every piece
+            assert len(trials) == len(PIECES)
+
+            # Check that the same piece doesn't occur twice in the same bot
+            pieces = [trial.definition["piece"] for trial in trials]
+            assert len(pieces) == len(set(pieces))
+
+        # Check that the bots see the pieces in different orders
+        piece_orders = [
+            tuple(trial.definition["piece"] for trial in trials)
+            for trials in trials_by_bot
+        ]
+        assert len(set(piece_orders)) > 1
+
+        # Check that each node has been seen a similar number of times
+        # Returns a list of tuples: [(node_id, count), ...]
+        node_counts = (
+            StaticTrial.query
+            .filter_by(trial_maker_id="main")
+            .group_by(StaticTrial.node_id)
+            .with_entities(StaticTrial.node_id, func.count(StaticTrial.id).label('count'))
+            .all()
+        )
+        counts = [count for _, count in node_counts]
+        assert len(counts) > 0, "No nodes found"
+        assert max(counts) - min(counts) <= 1, f"Node counts are not balanced: min={min(counts)}, max={max(counts)}"
+
+        # [(definition1,), (definition2,), ...] (list of 1-tuples)
+        all_definitions = (
+            AudioTimedButtonTrial.query
+            .filter_by(trial_maker_id="main")
+            .with_entities(AudioTimedButtonTrial.definition)
+            .all()
+        )
+
+        # [definition1, definition2, ...] (list of dicts)
+        all_definitions = [definition for definition, in all_definitions]
+
+        # Assert that each piece has been seen a similar number of times
+        piece_counts = Counter[str](definition["piece"] for definition in all_definitions)
+        counts = list[int](piece_counts.values())
+        assert len(counts) == len(PIECES), f"Expected {len(PIECES)} pieces, found {len(counts)}"
+        assert max(counts) - min(counts) <= 1, f"Piece counts are not balanced: min={min(counts)}, max={max(counts)}"
+
+        # Assert that each condition has been seen a similar number of times
+        condition_counts = Counter[str](definition["condition"] for definition in all_definitions)
+        counts = list[int](condition_counts.values())
+        assert len(counts) == len(CONDITIONS), f"Expected {len(CONDITIONS)} conditions, found {len(counts)}"
+        assert max(counts) - min(counts) <= 1, f"Condition counts are not balanced: min={min(counts)}, max={max(counts)}"
+
+        # Assert that each stimulus has been seen a similar number of times
+        stimulus_counts = Counter[str](definition["stimulus"] for definition in all_definitions)
+        counts = list[int](stimulus_counts.values())
+        expected_stimuli = len(PIECES) * len(CONDITIONS)
+        assert len(counts) <= expected_stimuli, f"Found {len(counts)} unique stimuli, expected at most {expected_stimuli}"
+        assert max(counts) - min(counts) <= 1, f"Stimulus counts are not balanced: min={min(counts)}, max={max(counts)}"
