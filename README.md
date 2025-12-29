@@ -1,19 +1,24 @@
-# Timed Push Button demo
+# Mendelssohn Expectation Experiment
 
 ## Overview
 
-This is a demo of the 'Timed Push Button paradigm' using the PsyNet framework.
+This experiment investigates how listeners generate expectations about musical events. Participants listen to Mendelssohn pieces that have been altered according to various rules, and mark surprising events using a timed push button paradigm. The experiment uses the PsyNet framework.
 
-## Challenges to try out
+## Experiment Design
 
-- Try replacing the music stimuli with a set of your own
-- Try replacing different types of response for participants to provide (see [Modular Pages](https://psynetdev.gitlab.io/PsyNet/tutorials/modular_page.html))
-- Explore demographic questionnaires embedded within PsyNet (see [Demography](https://psynetdev.gitlab.io/PsyNet/tutorials/demography.html)) and add some at the end of the experiment timeline
+- **Stimuli**: 10 Mendelssohn pieces (Op. 19, No. 5; Op. 30, No. 1; Op. 30, No. 4; Op. 53, No. 3; Op. 62, No. 6; Op. 67, No. 4; Op. 67, No. 6; Op. 85, No. 2; Op. 102, No. 1; Op. 102, No. 2)
+- **Conditions**: Each piece has 5 conditions (1, 2a, 2b, 2c, 2d)
+- **Task**: Participants listen to each piece and press buttons to mark surprising events
+- **Response options**: "Slightly expected" (keyboard shortcut: S) or "Very unexpected" (keyboard shortcut: V)
+- **Trials per participant**: 10 (one piece per participant, with conditions balanced across participants)
 
-👑 Grand challenge
+## Structure
 
-Say you want the participants to hear short snippets of the music they pressed the buttons for, where they can write about why they found that particular bit interesting. How would you modify the current implementation?
-
+- `experiment.py`: Main experiment definition, trial structure, and bot testing
+- `control.py`: Custom timed push button control implementation
+- `questionnaire.py`: Initial and final questionnaires (demographics, musical experience, listening habits, strategy)
+- `debrief.py`: Debriefing page explaining the experiment purpose
+- `data/stimuli/`: Audio files for all piece-condition combinations
 
 ## Running the experiment
 
@@ -37,7 +42,7 @@ as a participant.
 
 ### Locally in a virtual environment
 
-A more conventional approach is to instead run this demo locally in a virtual environment.
+A more conventional approach is to instead run this experiment locally in a virtual environment.
 This is more involved as you have to install several related dependencies like Redis and PostgreSQL.
 To do so, navigate to the [PsyNet website](https://psynet.dev) and follow the 'virtual environment'
 installation instructions. We recommend using Python 3.12.10 for this (or double-check the recommended
@@ -48,3 +53,16 @@ version of Python specified in the `pyproject.toml` file in the PsyNet source di
 It should also be possible to load this repository using Devcontainers in an IDE such as VSCode.
 In theory, this should function equivalently to GitHub Codespaces. However, this hasn't worked
 so reliably for us yet, and we're still figuring out how to make it work better.
+
+## Dependencies
+
+- `psynet==13.0.0`: PsyNet framework for running online experiments
+- `mutagen==1.47.0`: For reading MP3 metadata (audio duration)
+
+## Testing
+
+The experiment includes comprehensive bot testing to verify:
+- Each bot sees all 10 pieces exactly once
+- Pieces are presented in randomized order
+- Conditions are balanced across participants
+- Stimuli are balanced across participants
