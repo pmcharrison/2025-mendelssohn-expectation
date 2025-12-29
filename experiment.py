@@ -99,6 +99,7 @@ class CustomTrialMaker(StaticTrialMaker):
         return shuffled_blocks
 
 
+
 class AudioTimedButtonTrial(StaticTrial):
     time_estimate = 40
     accumulate_answers = True
@@ -121,6 +122,7 @@ class AudioTimedButtonTrial(StaticTrial):
             ),
             scripts=[*self.keyboard_javascript],
         )
+
 
     def generate_random_response(self):
         n_events = random.randint(1, 3)
