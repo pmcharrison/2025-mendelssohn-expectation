@@ -9,6 +9,9 @@ def debriefing():
         and measured the extent to which you were surprised by the alterations.
         We plan to compare your responses to computational models that simulate listener expectations.
 
+        In case you're interested, the musical excerpts were compositions by Felix Mendelssohn,
+        specifically 'Songs without Words'.
+
         Thank you for participating!
         """,
         time_estimate=30,
