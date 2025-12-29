@@ -3,7 +3,7 @@ import random
 from psynet.modular_page import ModularPage, SurveyJSControl
 
 
-def questionnaire():
+def initial_questionnaire():
     return ModularPage(
         "questionnaire",
         prompt="Please answer the following questions about your musical experience and listening habits.",
@@ -107,14 +107,14 @@ def questionnaire():
                     }
                 ]
             },
-            bot_response=generate_questionnaire_bot_response,
+            bot_response=generate_initial_questionnaire_bot_response,
         ),
         time_estimate=60,
-        save_answer="questionnaire",
+        save_answer="initial_questionnaire",
     )
 
 
-def generate_questionnaire_bot_response():
+def generate_initial_questionnaire_bot_response():
     played_instrument = random.choice(["yes", "no"])
     listen_frequency = random.choice(["never", "<1", "1-2", "3-5", ">5"])
 
@@ -135,3 +135,74 @@ def generate_questionnaire_bot_response():
         ])
 
     return response
+
+
+def final_questionnaire():
+    return ModularPage(
+        "final_questionnaire",
+        prompt="After listening to all ten extracts, please answer the following question.",
+        control=SurveyJSControl(
+            design={
+                "pages": [
+                    {
+                        "name": "surprise_source",
+                        "elements": [
+                            {
+                                "type": "radiogroup",
+                                "name": "most_surprised_by",
+                                "isRequired": True,
+                                "choices": [
+                                    {"value": "melody", "text": "Melody"},
+                                    {"value": "harmony", "text": "Harmony"},
+                                    {"value": "equally", "text": "Equally"},
+                                    {"value": "dont_know", "text": "Don't know enough about music to say"},
+                                ]
+                            },
+                            {
+                                "type": "comment",
+                                "name": "general_strategy",
+                                "title": "Please tell us a little about your strategy for completing the task.",
+                                "isRequired": True,
+                            }
+                        ]
+                    },
+                    {
+                        "name": "feedback",
+                        "elements": [
+                            {
+                                "type": "comment",
+                                "name": "experiment_feedback",
+                                "title": "Do you have any feedback on the experiment?",
+                                "isRequired": False
+                            }
+                        ]
+                    }
+                ]
+            },
+            bot_response=generate_final_questionnaire_bot_response,
+        ),
+        time_estimate=60,
+        save_answer="final_questionnaire",
+    )
+
+
+def generate_final_questionnaire_bot_response():
+    strategy_options = [
+        "I focused on listening for unexpected changes in the music.",
+        "I tried to identify moments that stood out from the rest of the piece.",
+        "I listened for anything that sounded unusual or surprising.",
+        "I paid attention to both melody and harmony to detect surprises.",
+        "I focused on the overall musical flow and marked anything that disrupted it."
+    ]
+    feedback_options = [
+        "The experiment was interesting.",
+        "I enjoyed listening to the music.",
+        "Some pieces were more surprising than others.",
+        "",
+        None
+    ]
+    return {
+        "most_surprised_by": random.choice(["melody", "harmony", "equally", "dont_know"]),
+        "general_strategy": random.choice(strategy_options),
+        "experiment_feedback": random.choice(feedback_options)
+    }

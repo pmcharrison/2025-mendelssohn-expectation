@@ -9,20 +9,21 @@ import json
 import random
 from typing import List
 
+from mutagen.mp3 import MP3
+
 from sqlalchemy import func
 
 from psynet.bot import Bot
 import psynet.experiment
-from mutagen.mp3 import MP3
-
-from psynet.asset import asset  # noqa
+from psynet.asset import asset
 from psynet.timeline import ProgressDisplay, ProgressStage, Timeline
 from psynet.page import InfoPage
 from psynet.modular_page import ModularPage, AudioPrompt
 from psynet.trial.static import StaticNode, StaticTrial, StaticTrialMaker
 
 from .control import TimedPushButtonControl
-from .questionnaire import questionnaire
+from .debrief import debriefing
+from .questionnaire import initial_questionnaire, final_questionnaire
 
 
 STIMULUS_DIR = "data/stimuli"
@@ -51,7 +52,7 @@ TRIALS_PER_PARTICIPANT = len(PIECES)
 
 def get_timeline():
     return Timeline(
-        questionnaire(),
+        initial_questionnaire(),
         InfoPage("Welcome! You will listen to audio and mark interesting moments.", time_estimate=5),
         CustomTrialMaker(
             id_="main",
@@ -62,7 +63,8 @@ def get_timeline():
             max_trials_per_block=1,  # We treat each piece as a block
             balance_across_nodes=True,  # PsyNet will make sure each piece/condition combination gets a similar number of trials
         ),
-        InfoPage("Thank you for participating!", time_estimate=5)
+        final_questionnaire(),
+        debriefing(),
     )
 
 
