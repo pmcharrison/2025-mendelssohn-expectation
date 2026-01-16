@@ -143,21 +143,27 @@ def information_sheet_and_consent_form():
                     </p>
                     """
                 ),
-                control=CheckboxControl(
+                control=CompulsoryCheckboxControl(
                     choices=["understand", "agree"],
                     labels=[
                         "I have read and understood the information above.",
                         "I agree to take part in this research.",
                     ],
                 ),
-                validate=lambda response, **kwargs: (
-                    None if "understand" in response.answer and "agree" in response.answer
-                    else FailedValidation("Please confirm both statements to continue.")
-                ),
             ),
             time_estimate=15,
         ),
     )
+
+
+class CompulsoryCheckboxControl(CheckboxControl):
+    def validate(self, response, **kwargs):
+        if not all(choice in response.answer for choice in self.choices):
+            return FailedValidation("Please confirm all statements to continue.")
+        return super().validate(response, **kwargs)
+
+    def get_bot_response(self, experiment, bot, page, prompt):
+        return self.choices
 
 
 def training():
