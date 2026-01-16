@@ -66,7 +66,7 @@ def initial_questionnaire():
                                     {"value": ">12", "text": ">12 years"}
                                 ],
                             },
-                                                        {
+                            {
                                 "type": "radiogroup",
                                 "name": "still_play",
                                 "title": "Do you still play?",
@@ -150,6 +150,7 @@ def final_questionnaire():
                             {
                                 "type": "radiogroup",
                                 "name": "most_surprised_by",
+                                "title": "Which part of the music surprised you the most?",
                                 "isRequired": True,
                                 "choices": [
                                     {"value": "melody", "text": "Melody"},
@@ -157,7 +158,12 @@ def final_questionnaire():
                                     {"value": "equally", "text": "Equally"},
                                     {"value": "dont_know", "text": "Don't know enough about music to say"},
                                 ]
-                            },
+                            }
+                        ]
+                    },
+                    {
+                        "name": "general_strategy",
+                        "elements": [
                             {
                                 "type": "comment",
                                 "name": "general_strategy",

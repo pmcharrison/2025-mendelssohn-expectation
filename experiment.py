@@ -4,6 +4,7 @@ In this experiment participants mark and describe interesting moments in a piece
 # pylint: disable=missing-class-docstring,missing-function-docstring
 
 from collections import Counter
+import os
 from pathlib import Path
 import json
 import random
@@ -47,6 +48,13 @@ assert len(PIECES) == 10
 
 CONDITIONS = ["1", "2a", "2b", "2c", "2d"]
 assert len(CONDITIONS) == 5
+
+
+# Run the experiment with only one piece for testing by running
+# MINIMAL=1 psynet debug local
+# in the terminal.
+if os.environ.get("MINIMAL"):
+    PIECES = PIECES[:1]
 
 TRIALS_PER_PARTICIPANT = len(PIECES)
 
@@ -99,8 +107,8 @@ def training():
             that you weren't quite expecting. We will play you various musical excerpts
             and ask you to mark the moments that you found surprising.
 
-            Don't worry if you don't know much about music, and don't worry if you don't recognise the music.
-            We're just interested in your intuitive feelings.
+            Don't worry if you don't know much about music, and don't worry if you don't recognise the music!
+            We're just interested in your intuitive responses.
             """,
             time_estimate=15,
         ),
@@ -186,6 +194,7 @@ class AudioTimedButtonTrial(StaticTrial):
                             <li>If it was very surprising, press <strong>V</strong>.</li>
                         </ul>
                         <p>There might be multiple surprising moments in the piece, so keep listening throughout.</p>
+                        <p>Note that the piece might finish suddenly, don't worry about that.</p>
                         <p>If you think you messed up, you can refresh the page to try again, but try to avoid this if you can.</p>
                         """
                     ),
@@ -201,9 +210,9 @@ class AudioTimedButtonTrial(StaticTrial):
                 ),
                 scripts=[*self.keyboard_javascript],
                 save_answer="events",
-                events={
-                    "submitEnable": Event(is_triggered_by="promptEnd"),
-                },
+                # events={
+                #     "submitEnable": Event(is_triggered_by="promptEnd"),
+                # },
             ),
             PageMaker(self.show_answer_if_appropriate),
             ModularPage(
@@ -224,8 +233,8 @@ class AudioTimedButtonTrial(StaticTrial):
 
     def show_answer(self, participant):
         events = participant.var.get("events")
-        n_slightly_surprising = len([e for e in events if e["choice"] == "Slightly expected"])
-        n_very_surprising = len([e for e in events if e["choice"] == "Very unexpected"])
+        n_slightly_surprising = len([e for e in events if e["choice"] == "Slightly surprising"])
+        n_very_surprising = len([e for e in events if e["choice"] == "Very surprising"])
         return InfoPage(
             f"""
             You marked {n_slightly_surprising} moment(s) as slightly surprising
@@ -245,7 +254,7 @@ class AudioTimedButtonTrial(StaticTrial):
             for choice, time in zip(choices, times)
         ]
 
-    choices = ["Slightly expected", "Very unexpected"]
+    choices = ["Slightly surprising", "Very surprising"]
     keys = ['S', 'V']
 
     @property
