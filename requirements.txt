@@ -1,2 +1,2 @@
-psynet==13.0.0
+psynet@git+https://gitlab.com/PsyNetDev/PsyNet@cbc7d5ae8cf5010266f89bcb4a84c68dc822e592#egg=psynet
 mutagen==1.47.0

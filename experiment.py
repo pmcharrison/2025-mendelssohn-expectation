@@ -9,16 +9,18 @@ import json
 import random
 from typing import List
 
+from markupsafe import Markup
 from mutagen.mp3 import MP3
 
+from psynet.trial.main import GenericTrialNode
 from sqlalchemy import func
 
 from psynet.bot import Bot
 import psynet.experiment
 from psynet.asset import asset
-from psynet.timeline import ProgressDisplay, ProgressStage, Timeline
-from psynet.page import InfoPage
-from psynet.modular_page import ModularPage, AudioPrompt
+from psynet.timeline import Event, conditional, join, ProgressDisplay, ProgressStage, Timeline
+from psynet.page import CodeBlock, InfoPage, PageMaker, VolumeCalibration, while_loop
+from psynet.modular_page import ModularPage, AudioPrompt, PushButtonControl
 from psynet.trial.static import StaticNode, StaticTrial, StaticTrialMaker
 
 from .control import TimedPushButtonControl
@@ -49,22 +51,84 @@ assert len(CONDITIONS) == 5
 TRIALS_PER_PARTICIPANT = len(PIECES)
 
 
-
 def get_timeline():
     return Timeline(
+        InfoPage(
+            """
+            This experiment requires you to sit in a quiet room and wear headphones.
+            Please only continue once you're ready.
+            """,
+            time_estimate=7.5,
+        ),
+        VolumeCalibration("static/example_stimulus.mp3"),
         initial_questionnaire(),
-        InfoPage("Welcome! You will listen to audio and mark interesting moments.", time_estimate=5),
+        training(),
+        InfoPage(
+            f"""
+            You will now proceed to the main experiment, where you will take {TRIALS_PER_PARTICIPANT} trials.
+            Please try to take these all in one go.
+            Have fun!
+            """,
+            time_estimate=5,
+        ),
         CustomTrialMaker(
             id_="main",
             trial_class=AudioTimedButtonTrial,
-            nodes=get_nodes,  # not get_nodes()!
+            nodes=get_nodes,
             expected_trials_per_participant=TRIALS_PER_PARTICIPANT,
             max_trials_per_participant=TRIALS_PER_PARTICIPANT,
-            max_trials_per_block=1,  # We treat each piece as a block
-            balance_across_nodes=True,  # PsyNet will make sure each piece/condition combination gets a similar number of trials
+            max_trials_per_block=1,
+            balance_across_nodes=True,
+        ),
+        InfoPage(
+            """
+            Congratulations, you finished the main part of the experiment!
+            """,
+            time_estimate=5,
         ),
         final_questionnaire(),
         debriefing(),
+    )
+
+
+def training():
+    return join(
+        InfoPage(
+            """
+            This experiment is about the concept of musical 'surprise': when something happens
+            that you weren't quite expecting. We will play you various musical excerpts
+            and ask you to mark the moments that you found surprising.
+
+            Don't worry if you don't know much about music, and don't worry if you don't recognise the music.
+            We're just interested in your intuitive feelings.
+            """,
+            time_estimate=15,
+        ),
+        InfoPage(
+            """
+            We'll now give you a chance to try the task.
+            """,
+            time_estimate=5,
+        ),
+        CodeBlock(lambda participant: participant.var.set("training", "Yes")),
+        while_loop(
+            "training",
+            condition=lambda participant: participant.var.get("training") == "Yes",
+            logic=join(
+                administer_practice_trial(),
+                ModularPage(
+                    "try_again",
+                    prompt="Would you like to try the practice task again?",
+                    control=PushButtonControl(
+                        choices=["Yes", "No"],
+                    ),
+                    time_estimate=5,
+                    save_answer="training",
+                )
+            ),
+            expected_repetitions=1,
+            fix_time_credit=True,  # don't pay them more for repeating the training
+        )
     )
 
 
@@ -81,7 +145,7 @@ def get_nodes():
                         "piece": piece,
                         "condition": condition,
                         "stimulus": stimulus,
-                        "duration_seconds": MP3(str(path)).info.length
+                        "duration_seconds": get_audio_file_duration(path)
                     },
                     block=piece,
                     assets={
@@ -92,6 +156,10 @@ def get_nodes():
     return nodes
 
 
+def get_audio_file_duration(path) -> float:
+    return MP3(str(path)).info.length
+
+
 class CustomTrialMaker(StaticTrialMaker):
     def choose_block_order(self, experiment, participant, blocks):
         shuffled_blocks = list(blocks)
@@ -99,30 +167,71 @@ class CustomTrialMaker(StaticTrialMaker):
         return shuffled_blocks
 
 
-
 class AudioTimedButtonTrial(StaticTrial):
     time_estimate = 40
     accumulate_answers = True
+    should_show_answer = True
 
     def show_trial(self, experiment, participant):
-        return ModularPage(
-            "event_times",
-            prompt=AudioPrompt(
-                audio=self.assets["audio"],
-                text="Listen to the music and press the button when you hear a surprising event.",
-                controls=False
+        return join(
+            ModularPage(
+                "events",
+                prompt=AudioPrompt(
+                    audio=self.audio,
+                    text=Markup(
+                        """
+                        <p>Listen out for surprising moments. When you hear a surprising moment, mark it as follows:</p>
+                        <ul>
+                            <li>If it was slightly surprising, press <strong>S</strong>.</li>
+                            <li>If it was very surprising, press <strong>V</strong>.</li>
+                        </ul>
+                        <p>There might be multiple surprising moments in the piece, so keep listening throughout.</p>
+                        <p>If you think you messed up, you can refresh the page to try again, but try to avoid this if you can.</p>
+                        """
+                    ),
+                    controls=False
+                ),
+                control=TimedPushButtonControl(
+                    choices=self.choices,
+                    button_highlight_duration=0.75,
+                    bot_response=self.generate_random_response,
+                ),
+                progress_display=ProgressDisplay(
+                    stages=[ProgressStage([0.0, self.definition["duration_seconds"]])],
+                ),
+                scripts=[*self.keyboard_javascript],
+                save_answer="events",
+                events={
+                    "submitEnable": Event(is_triggered_by="promptEnd"),
+                },
             ),
-            control=TimedPushButtonControl(
-                choices=self.choices,
-                button_highlight_duration=0.75,
-                bot_response=self.generate_random_response,
+            PageMaker(self.show_answer_if_appropriate),
+            ModularPage(
+                "recognition",
+                prompt="Do you think you'd heard that piece before?",
+                control=PushButtonControl(["Yes", "No"]),
             ),
-            progress_display=ProgressDisplay(
-                stages=[ProgressStage([0.0, self.definition["duration_seconds"]])],
-            ),
-            scripts=[*self.keyboard_javascript],
         )
 
+    @property
+    def audio(self):
+        return self.assets["audio"]
+
+    def show_answer_if_appropriate(self, participant):
+        if self.should_show_answer:
+            return self.show_answer(participant)
+        return []
+
+    def show_answer(self, participant):
+        events = participant.var.get("events")
+        n_slightly_surprising = len([e for e in events if e["choice"] == "Slightly expected"])
+        n_very_surprising = len([e for e in events if e["choice"] == "Very unexpected"])
+        return InfoPage(
+            f"""
+            You marked {n_slightly_surprising} moment(s) as slightly surprising
+            and {n_very_surprising} moment(s) as very surprising.
+            """,
+        )
 
     def generate_random_response(self):
         n_events = random.randint(1, 3)
@@ -135,9 +244,6 @@ class AudioTimedButtonTrial(StaticTrial):
             }
             for choice, time in zip(choices, times)
         ]
-
-    def show_feedback(self, experiment, participant):
-        return InfoPage(f"Your response: {participant.answer}")
 
     choices = ["Slightly expected", "Very unexpected"]
     keys = ['S', 'V']
@@ -163,6 +269,21 @@ class AudioTimedButtonTrial(StaticTrial):
             });
             """
         ]
+
+
+class PracticeTrial(AudioTimedButtonTrial):
+    should_show_answer = True
+
+    @property
+    def audio(self):
+        return "static/example_stimulus.mp3"
+
+
+def administer_practice_trial():
+    return PracticeTrial.cue(definition={"duration_seconds": get_audio_file_duration("static/example_stimulus.mp3")})
+
+
+GenericTrialNode.check_ready_to_spawn = lambda self: None
 
 
 class Experiment(psynet.experiment.Experiment):

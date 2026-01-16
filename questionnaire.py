@@ -99,7 +99,7 @@ def initial_questionnaire():
                             {
                                 "type": "text",
                                 "name": "predominant_genre",
-                                "title": "Which genre do you predominantly listen to?",
+                                "title": "Which genre(s) do you predominantly listen to?",
                                 "isRequired": True,
                                 "visibleIf": "{listen_frequency} != 'never'"
                             }
@@ -140,7 +140,7 @@ def generate_initial_questionnaire_bot_response():
 def final_questionnaire():
     return ModularPage(
         "final_questionnaire",
-        prompt="After listening to all ten extracts, please answer the following question.",
+        prompt="We just have a few final questions for you before the experiment concludes.",
         control=SurveyJSControl(
             design={
                 "pages": [
