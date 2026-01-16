@@ -86,6 +86,7 @@ def get_timeline():
             expected_trials_per_participant=TRIALS_PER_PARTICIPANT,
             max_trials_per_participant=TRIALS_PER_PARTICIPANT,
             max_trials_per_block=1,
+            # Each node corresponds to a piece-condition combination
             balance_across_nodes=True,
         ),
         InfoPage(
@@ -141,6 +142,11 @@ def training():
 
 
 def get_nodes():
+    """
+    Get the nodes for the trial maker.
+
+    Each node corresponds to a piece-condition combination.
+    """
     nodes = []
 
     for piece in PIECES:
