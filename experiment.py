@@ -13,15 +13,16 @@ from typing import List
 from markupsafe import Markup
 from mutagen.mp3 import MP3
 
+from psynet.consent import NoConsent
 from psynet.trial.main import GenericTrialNode
 from sqlalchemy import func
 
 from psynet.bot import Bot
 import psynet.experiment
 from psynet.asset import asset
-from psynet.timeline import Event, conditional, join, ProgressDisplay, ProgressStage, Timeline
+from psynet.timeline import FailedValidation, join, ProgressDisplay, ProgressStage, Timeline
 from psynet.page import CodeBlock, InfoPage, PageMaker, VolumeCalibration, while_loop
-from psynet.modular_page import ModularPage, AudioPrompt, PushButtonControl
+from psynet.modular_page import CheckboxControl, ModularPage, AudioPrompt, PushButtonControl
 from psynet.trial.static import StaticNode, StaticTrial, StaticTrialMaker
 
 from .control import TimedPushButtonControl
@@ -61,6 +62,7 @@ TRIALS_PER_PARTICIPANT = len(PIECES)
 
 def get_timeline():
     return Timeline(
+        information_sheet_and_consent_form(),
         InfoPage(
             """
             This experiment requires you to sit in a quiet room and wear headphones.
@@ -97,6 +99,64 @@ def get_timeline():
         ),
         final_questionnaire(),
         debriefing(),
+    )
+
+
+def information_sheet_and_consent_form():
+    return join(
+        NoConsent(),
+        PageMaker(
+            lambda experiment: ModularPage(
+                "consent",
+                prompt=Markup(
+                    f"""
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <div><strong>INFORMATION SHEET AND CONSENT</strong></div>
+                        <div style="text-align: right; font-style: italic;">
+                            <div>Faculty of Music</div>
+                            <div>University of Cambridge</div>
+                        </div>
+                    </div>
+                    <hr style="border: 2px solid black; margin: 10px 0;">
+                    <div style="margin-top: 20px;">
+                        <div><strong>Project:</strong> Exploring musical expectation</div>
+                        <div><strong>Researcher(s):</strong> Maddie Melville-Smith</div>
+                        <div><strong>Contact email:</strong> mm2774@cam.ac.uk</div>
+                    </div>
+                    <p style="margin-top: 20px;">
+                        Before participating in this experiment, you will be asked to fill in a short questionnaire
+                        about your musical experience and listening habits. You will then be asked to listen and respond
+                        to musical extracts. You will then complete a further short questionnaire.
+                        In total this should take around
+                        {int(round(experiment.timeline.estimated_time_credit.get_max("time") / 60, 0))}
+                        minutes of your time. Please wear headphones.
+                    </p>
+                    <p style="margin-top: 15px;">
+                        Your participation is completely voluntary. You may withdraw from the session and be paid
+                        according to the amount of the study you have completed.
+                    </p>
+                    <p style="margin-top: 15px;">
+                        All data are recorded anonymously.
+                    </p>
+                    <p style="margin-top: 20px;">
+                        <em>Please tick in each box to confirm the following statements:</em>
+                    </p>
+                    """
+                ),
+                control=CheckboxControl(
+                    choices=["understand", "agree"],
+                    labels=[
+                        "I have read and understood the information above.",
+                        "I agree to take part in this research.",
+                    ],
+                ),
+                validate=lambda response, **kwargs: (
+                    None if "understand" in response.answer and "agree" in response.answer
+                    else FailedValidation("Please confirm both statements to continue.")
+                ),
+            ),
+            time_estimate=15,
+        ),
     )
 
 
