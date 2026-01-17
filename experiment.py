@@ -20,7 +20,7 @@ from sqlalchemy import func
 from psynet.bot import Bot
 import psynet.experiment
 from psynet.asset import asset
-from psynet.timeline import FailedValidation, join, ProgressDisplay, ProgressStage, Timeline
+from psynet.timeline import Event, FailedValidation, join, ProgressDisplay, ProgressStage, Timeline
 from psynet.page import CodeBlock, InfoPage, PageMaker, VolumeCalibration, while_loop
 from psynet.modular_page import CheckboxControl, ModularPage, AudioPrompt, PushButtonControl
 from psynet.trial.static import StaticNode, StaticTrial, StaticTrialMaker
@@ -282,9 +282,9 @@ class AudioTimedButtonTrial(StaticTrial):
                 ),
                 scripts=[*self.keyboard_javascript],
                 save_answer="events",
-                # events={
-                #     "submitEnable": Event(is_triggered_by="promptEnd"),
-                # },
+                events={
+                    "submitEnable": Event(is_triggered_by="promptEnd"),
+                },
             ),
             PageMaker(self.show_answer_if_appropriate),
             ModularPage(
