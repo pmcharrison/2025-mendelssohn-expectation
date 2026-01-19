@@ -260,11 +260,8 @@ class AudioTimedButtonTrial(StaticTrial):
                     audio=self.audio,
                     text=Markup(
                         """
-                        <p>Listen out for surprising moments. When you hear a surprising moment, mark it as follows:</p>
-                        <ul>
-                            <li>If it was slightly surprising, press <strong>S</strong>.</li>
-                            <li>If it was very surprising, press <strong>V</strong>.</li>
-                        </ul>
+                        <p>Listen out for surprising moments. When you hear a surprising moment,
+                        press <strong>S</strong> on your keyboard.</p>
                         <p>There might be multiple surprising moments in the piece, so keep listening throughout.</p>
                         <p>Note that the piece might finish suddenly, don't worry about that.</p>
                         <p>If you think you messed up, you can refresh the page to try again, but try to avoid this if you can.</p>
@@ -305,12 +302,10 @@ class AudioTimedButtonTrial(StaticTrial):
 
     def show_answer(self, participant):
         events = participant.var.get("events")
-        n_slightly_surprising = len([e for e in events if e["choice"] == "Slightly surprising"])
-        n_very_surprising = len([e for e in events if e["choice"] == "Very surprising"])
+        n_surprising = len([e for e in events if e["choice"] == "Surprising"])
         return InfoPage(
             f"""
-            You marked {n_slightly_surprising} moment(s) as slightly surprising
-            and {n_very_surprising} moment(s) as very surprising.
+            You marked {n_surprising} moment(s) as surprising.
             """,
         )
 
@@ -326,8 +321,8 @@ class AudioTimedButtonTrial(StaticTrial):
             for choice, time in zip(choices, times)
         ]
 
-    choices = ["Slightly surprising", "Very surprising"]
-    keys = ['S', 'V']
+    choices = ["Surprising"]
+    keys = ['S']
 
     @property
     def key_map(self):
