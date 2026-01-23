@@ -1,2 +1,4 @@
-psynet==13.1.0rc0
+# https://gitlab.com/PsyNetDev/PsyNet/-/merge_requests/921
+psynet@git+https://gitlab.com/PsyNetDev/PsyNet@302b5cd67f774068d8d201d3e013e9a375f05c0f#egg=psynet
+
 mutagen==1.47.0
