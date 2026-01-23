@@ -10,6 +10,8 @@ show_reward = true
 
 [Prolific]
 recruiter = prolific
+
+prolific_workspace = Cambridge
 prolific_project = Mendelssohn expectation project
 
 # Setting `auto_recruit = false` means that PsyNet won't recruit participants itself,
