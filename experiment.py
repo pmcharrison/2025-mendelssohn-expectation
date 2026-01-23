@@ -229,7 +229,7 @@ def get_nodes():
                     },
                     block=piece,
                     assets={
-                        "audio": asset(path, cache=False),  # reuse the uploaded file between deployments
+                        "audio": asset(path, cache=True),  # reuse the uploaded file between deployments
                     },
                 )
             )

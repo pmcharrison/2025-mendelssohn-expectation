@@ -11,6 +11,7 @@ show_reward = true
 [Prolific]
 recruiter = prolific
 
+# In the Prolific dashboard: set participants to UK/USA
 prolific_workspace = Cambridge
 prolific_project = Mendelssohn expectation project
 
