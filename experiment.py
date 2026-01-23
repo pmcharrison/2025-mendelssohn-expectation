@@ -217,7 +217,7 @@ def get_nodes():
 
     for piece in PIECES:
         for condition in CONDITIONS:
-            stimulus = f"{piece} condition {condition}"
+            stimulus = f"R2 {piece} condition {condition}"
             path = Path(STIMULUS_DIR) / f"{stimulus}.mp3"
             nodes.append(
                 StaticNode(
