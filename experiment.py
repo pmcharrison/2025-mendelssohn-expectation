@@ -71,8 +71,9 @@ def get_timeline():
             """,
             time_estimate=7.5,
         ),
-        AntiphaseHeadphoneTest(),
         VolumeCalibration("static/example_stimulus.mp3"),
+        AntiphaseHeadphoneTest(),
+        InfoPage("You passed the test!", time_estimate=0),
         initial_questionnaire(),
         training(),
         InfoPage(
