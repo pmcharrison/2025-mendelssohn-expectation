@@ -19,5 +19,5 @@ prolific_project = Mendelssohn expectation project
 # you'll instead control recruitment via the Prolific interface.
 # auto_recruit = false
 
-prolific_estimated_completion_minutes = 11
-base_payment = 2.21
+prolific_estimated_completion_minutes = 12
+base_payment = 2.42

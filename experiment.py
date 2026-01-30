@@ -23,6 +23,7 @@ from psynet.asset import asset
 from psynet.timeline import Event, FailedValidation, join, ProgressDisplay, ProgressStage, Timeline
 from psynet.page import CodeBlock, InfoPage, PageMaker, VolumeCalibration, while_loop
 from psynet.modular_page import CheckboxControl, ModularPage, AudioPrompt, PushButtonControl
+from psynet.prescreen import AntiphaseHeadphoneTest
 from psynet.trial.static import StaticNode, StaticTrial, StaticTrialMaker
 
 from .control import TimedPushButtonControl
@@ -70,6 +71,7 @@ def get_timeline():
             """,
             time_estimate=7.5,
         ),
+        AntiphaseHeadphoneTest(),
         VolumeCalibration("static/example_stimulus.mp3"),
         initial_questionnaire(),
         training(),
@@ -124,12 +126,15 @@ def information_sheet_and_consent_form():
                         <div><strong>Contact email:</strong> mm2774@cam.ac.uk</div>
                     </div>
                     <p style="margin-top: 20px;">
-                        Before participating in this experiment, you will be asked to fill in a short questionnaire
+                        At the start of the experiment, you will be asked to conduct a short listening test
+                        to verify that you are wearing headphones and that they are working correctly.
+                        If you do not pass the test, you will not be able to participate in the experiment.
+                        You will then be asked to fill in a short questionnaire
                         about your musical experience and listening habits. You will then be asked to listen and respond
-                        to musical extracts. You will then complete a further short questionnaire.
+                        to musical extracts. You will finally complete a further short questionnaire.
                         In total this should take around
                         {int(round(experiment.timeline.estimated_time_credit.get_max("time") / 60, 0))}
-                        minutes of your time. Please wear headphones.
+                        minutes of your time.
                     </p>
                     <p style="margin-top: 15px;">
                         Your participation is completely voluntary. You may withdraw from the session and be paid
